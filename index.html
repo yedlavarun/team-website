@@ -2,14 +2,65 @@
 <html lang="en">    
 
 <head>
+    <link rel="stylesheet" href="stylesheet.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sample HTML Document</title>
+    <title>Cardio Territory Wars</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet" />
 </head>
 
 <body>
-    <h1>Welcome to My Sample HTML Document</h1>
-    <p>This is a simple HTML document to demonstrate the structure of an HTML file.</p>
+    <!-- I put a id instead of class. We will see if we need to make it a class instead, but we only use this 
+     to align with the body -->
+    <div id="hud_container">
+        <!-- This is used to align stuff inside -->
+        <div class="panel">
+            <!-- Title/Head with activity check -->
+            <div id="header_row">
+                <div id="app_title">Territory Wars</div>
+                <div id="check_for_activity"></div> <!-- Leave this to me -->
+            </div>
+
+            <!-- grid with self info -->
+            <div class="metric_grid">
+                <div class="metric_item">
+                    <div class="metric_value" id="timer">00:00</div>
+                    <div class="metric_label">Duration</div>
+                </div>
+
+                <div class="metric_item">
+                    <div class="metric_value">
+                        <span id="distance">0.00</span> km
+                    </div>
+                    <div class="metric_label">Distance</div>
+                </div>
+            </div>
+
+            <!-- comparing scores -->
+            <div class="score_row">
+                <div class="score_block">
+                    <div class="score_value" id="myScore">0</div>
+                    <div class="score_label">My Zone</div>
+                </div>
+
+                <div class="score_block">
+                    <div class="score_value" id="enemyScore">0</div>
+                    <div class="score_label">Rival</div>
+                </div>
+            </div>
+
+            <!-- Activate/Deactivate button -->
+            <button id="mainBtn" class="btn-main" onclick="toggleTracking()">
+                Start Activity
+            </button>
+
+        </div>
+    </div>
 </body>
+
 
 </html>
