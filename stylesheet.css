@@ -17,6 +17,7 @@
     --text: #f8fafc;
     --muted: #94a3b8;
     --success: #22c55e;
+    --failed: #ef4444;
 }
 
 /* =========================
@@ -69,6 +70,14 @@ body {
     background: linear-gradient(135deg, #a5b4fc, var(--primary));
     background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+#check_for_activity {
+    width: 10px;
+    height: 10px;
+    background: var(--failed);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--failed);
 }
 
 
