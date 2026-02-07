@@ -15,6 +15,8 @@
 </head>
 
 <body>
+    
+    <p id="output"></p>
     <!-- I put a id instead of class. We will see if we need to make it a class instead, but we only use this 
      to align with the body -->
     <div id="hud_container">
@@ -55,7 +57,7 @@
             </div>
 
             <!-- Activate/Deactivate button -->
-            <button id="mainBtn" class="btn-main" onclick="toggleTracking()">
+            <button id="mainBtn" class="btn-main" onclick="toggleTracking(), getLocation()">
                 Start Activity
             </button>
 

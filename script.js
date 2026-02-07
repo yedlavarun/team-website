@@ -16,3 +16,38 @@ function toggleTracking() {
     }
 }
 
+function getLocation() {
+    if (!navigator.geolocation) {
+        document.getElementById("output").innerText =
+            "Geolocation is not supported by your browser.";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        success,
+        error,
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+
+function success(position) {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+    const accuracy = position.coords.accuracy;
+
+    document.getElementById("output").innerText =
+        `Latitude: ${lat}
+Longitude: ${lon}
+Accuracy: ±${accuracy} meters`;
+
+    console.log(position.coords);
+}
+
+function error(err) {
+    document.getElementById("output").innerText =
+        `Error: ${err.message}`;
+}
