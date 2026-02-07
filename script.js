@@ -34,20 +34,56 @@ function getLocation() {
     );
 }
 
-function success(position) {
-    const lat = position.coords.latitude;
-    const lon = position.coords.longitude;
-    const accuracy = position.coords.accuracy;
 
-    document.getElementById("output").innerText =
-        `Latitude: ${lat}
-Longitude: ${lon}
-Accuracy: ±${accuracy} meters`;
+watchId = navigator.geolocation.watchPosition(
+    (position) => {
+        console.log("UPDATE @", new Date().toLocaleTimeString());
+        console.log(position.coords.latitude, position.coords.longitude);
+    },
+    (error) => console.error(error),
+    { enableHighAccuracy: true }
+);
 
-    console.log(position.coords);
+var tracking = false;
+
+function startTracking() {
+    if (!("geolocation" in navigator)) {
+        console.log("Geolocation not supported");
+        return;
+    }
+
+    watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const acc = position.coords.accuracy;
+            const speed = position.coords.speed; // m/s (may be null)
+
+            console.log("Lat:", lat);
+            console.log("Lon:", lon);
+            console.log("Accuracy:", acc, "meters");
+            console.log("Speed:", speed);
+
+            // Example: update UI
+            document.getElementById("lat").textContent = lat;
+            document.getElementById("lon").textContent = lon;
+        },
+        (error) => {
+            console.error("GPS error:", error.message);
+        },
+        {
+            enableHighAccuracy: true,
+            maximumAge: 1000,   // use cached position for 1s
+            timeout: 5000
+        }
+    );
 }
 
-function error(err) {
-    document.getElementById("output").innerText =
-        `Error: ${err.message}`;
+function stopTracking() {
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
 }
+
+

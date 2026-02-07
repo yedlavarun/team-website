@@ -24,7 +24,10 @@
             <div id="header_row">
                 <div id="app_title">Territory Wars</div>
                 <div id="check_for_activity"></div> <!-- Leave this to me -->
-                <p id="output"></p>
+                <div>
+                    Latitude: <span id="lat" style="color: white;">--</span><br>
+                    Longitude: <span id="lon">--</span>
+                </div>
             </div>
 
             <!-- grid with self info -->
@@ -56,7 +59,7 @@
             </div>
 
             <!-- Activate/Deactivate button -->
-            <button id="mainBtn" class="btn-main" onclick="toggleTracking(), getLocation()">
+            <button id="mainBtn" class="btn-main" onclick="toggleTracking(), startTracking(), stopTracking()" >
                 Start Activity
             </button>
 
