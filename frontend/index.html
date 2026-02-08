@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="stylesheet.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardio Territory Wars</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- I put a id instead of class. We will see if we need to make it a class instead, but we only use this 
+     to align with the body -->
+    <div id="hud_container">
+        <!-- This is used to align stuff inside -->
+        <div class="panel">
+            <!-- Title/Head with activity check -->
+            <div id="header_row">
+                <div id="app_title">Territory Wars</div>
+                <div id="check_for_activity"></div> <!-- Leave this to me -->
+            </div>
+
+            <!-- grid with self info -->
+            <div class="metric_grid">
+                <div class="metric_item">
+                    <div class="metric_value" id="timer">00:00</div>
+                    <div class="metric_label">Duration</div>
+                </div>
+
+                <div class="metric_item">
+                    <div class="metric_value">
+                        <span id="distance">0.00</span> km
+                    </div>
+                    <div class="metric_label">Distance</div>
+                </div>
+            </div>
+
+            <!-- comparing scores -->
+            <div class="score_row">
+                <div class="score_block">
+                    <div class="score_value" id="myScore">0</div>
+                    <div class="score_label">My Zone</div>
+                </div>
+
+                <div class="score_block">
+                    <div class="score_value" id="enemyScore">0</div>
+                    <div class="score_label">Rival</div>
+                </div>
+            </div>
+
+            <!-- Activate/Deactivate button -->
+            <button id="mainBtn" class="btn-main" onclick="toggleTracking()">
+                Start Activity
+            </button>
+
+        </div>
+    </div>
+</body>
+
+
+</html>

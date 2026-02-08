@@ -27,6 +27,20 @@ body {
     background-color: #0f172b;
     font-family: "Outfit", sans-serif;
     overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* =========================
+   MAP LAYER
+========================= */
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Below HUD */
 }
 
 /* =========================
@@ -39,6 +53,8 @@ body {
     width: 360px;
     display: flex;
     flex-direction: column;
+    z-index: 1000; /* Above map */
+    pointer-events: none; /* Let clicks pass through if needed, but child elements will capture */
 }
 
 /* =========================
@@ -51,6 +67,7 @@ body {
     border-radius: 22px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    pointer-events: auto; /* Re-enable clicks for the panel */
 }
 
 /* =========================

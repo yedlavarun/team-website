@@ -1,0 +1,41 @@
+# Cardio Wars - Run Instructions
+
+## Prerequisites
+- Node.js installed.
+- VS Code with "Live Server" extension (recommended).
+
+## 1. Backend Setup
+The backend handles the database and territory logic.
+
+1. Open a terminal in the project root.
+2. Navigate to the backend folder:
+   ```sh
+   cd backend
+   ```
+3. Install dependencies:
+   ```sh
+   npm install
+   ```
+4. Start the server:
+   ```sh
+   node server.js
+   ```
+   You should see: `Server running on port 3000` and `Connected to the SQLite database.`
+
+## 2. Frontend Setup
+The frontend displays the map and tracks your location.
+
+1. Open `frontend/index.html` in VS Code.
+2. Right-click and select **"Open with Live Server"**.
+3. Accept the **Location Permission** request in your browser.
+
+## 3. How to Play
+1. Click **"Start Activity"**.
+2. Walk or Run! (Or mock your location using Chrome DevTools -> More tools -> Sensors).
+3. As you move, blue rectangles will appear on the map, marking your territory.
+4. The dashboard will update your distance and score.
+
+## Troubleshooting
+- **Map not loading?** Check your internet connection (Leaflet needs to load tiles).
+- **"Geolocation denied"?** Allow location access in your browser settings.
+- **Scores not updating?** Ensure the backend server is running on port 3000.
