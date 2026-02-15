@@ -4,13 +4,14 @@
 <head>
     <link rel="stylesheet" href="stylesheet.css">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cardio Territory Wars</title>
 
     <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800;900&display=swap"
+        rel="stylesheet" />
 
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -25,53 +26,128 @@
     <!-- Map Container -->
     <div id="map"></div>
 
-    <!-- I put a id instead of class. We will see if we need to make it a class instead, but we only use this 
-     to align with the body -->
-    <div id="hud_container">
-        <!-- This is used to align stuff inside -->
-        <div class="panel">
-            <!-- Title/Head with activity check -->
-            <div id="header_row">
-                <div id="app_title">Territory Wars</div>
-                <div id="check_for_activity"></div> <!-- Leave this to me -->
+    <!-- HUD Overlay Layer -->
+    <div id="hud_layer">
+
+        <!-- Top Left: Team & Status -->
+        <div class="top-bar hud-element">
+            <div class="team-badge">
+                <div class="team-name">Blue Squad</div>
             </div>
 
-            <!-- grid with self info -->
-            <div class="metric_grid">
-                <div class="metric_item">
-                    <div class="metric_value" id="timer">00:00</div>
-                    <div class="metric_label">Duration</div>
-                </div>
+            <div class="status-indicators">
+                <div class="status-dot active" title="Online"></div>
+                <div class="status-dot active" title="GPS Locked"></div>
+            </div>
+        </div>
 
-                <div class="metric_item">
-                    <div class="metric_value">
-                        <span id="distance">0.00</span> km
-                    </div>
-                    <div class="metric_label">Distance</div>
+        <!-- Floating Stats Panel -->
+        <div class="stats-panel hud-element">
+            <div class="stat-item">
+                <div class="stat-value" id="timer">00:00</div>
+                <div class="stat-label">Time</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value"><span id="distance">0.00</span></div>
+                <div class="stat-label">Km</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value"><span id="speed">0.0</span></div>
+                <div class="stat-label">Km/h</div>
+            </div>
+        </div>
+
+        <!-- Floating Map Actions (Right Side) -->
+        <div class="map-actions hud-element">
+            <div class="fab" onclick="centerMap()">📍</div>
+            <div class="fab" onclick="showLeaderboard()">🏆</div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="bottom-controls hud-element">
+            <!-- Score Card -->
+            <div class="score-card">
+                <div class="score-team blue">
+                    <div class="score-val" id="myScore">0</div>
+                    <div class="score-lbl">My Zone</div>
+                </div>
+                <div class="vs-badge">VS</div>
+                <div class="score-team red">
+                    <div class="score-val" id="enemyScore">0</div>
+                    <div class="score-lbl">Rival</div>
                 </div>
             </div>
 
-            <!-- comparing scores -->
-            <div class="score_row">
-                <div class="score_block">
-                    <div class="score_value" id="myScore">0</div>
-                    <div class="score_label">My Zone</div>
-                </div>
-
-                <div class="score_block">
-                    <div class="score_value" id="enemyScore">0</div>
-                    <div class="score_label">Rival</div>
-                </div>
-            </div>
-
-            <!-- Activate/Deactivate button -->
-            <button id="mainBtn" class="btn-main" onclick="toggleTracking()">
-                Start Activity
+            <!-- Main Button -->
+            <button id="mainBtn" class="btn-game" onclick="toggleTracking()">
+                Start Patrol
             </button>
-
         </div>
     </div>
-</body>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- LEADERBOARD SCREEN (Hidden by default) -->
+    <div id="leaderboard-screen" class="screen hidden">
+        <div class="screen-header">
+            <button class="back-btn" onclick="hideLeaderboard()">←</button>
+            <div class="screen-title">Global Rankings</div>
+        </div>
+
+        <div class="leaderboard-list">
+            <!-- Example Items -->
+            <div class="rank-item top-3">
+                <div class="rank-num">1</div>
+                <div class="rank-user">NeonRunner</div>
+                <div style="margin-left:auto; font-weight:800; color:var(--primary)">2400 pts</div>
+            </div>
+            <div class="rank-item top-3">
+                <div class="rank-num">2</div>
+                <div class="rank-user">CyberWolf</div>
+                <div style="margin-left:auto; font-weight:800">2150 pts</div>
+            </div>
+            <div class="rank-item top-3">
+                <div class="rank-num">3</div>
+                <div class="rank-user">RogueAgent</div>
+                <div style="margin-left:auto; font-weight:800">1980 pts</div>
+            </div>
+            <div class="rank-item active-user">
+                <div class="rank-num">12</div>
+                <div class="rank-user">You (Blue Squad)</div>
+                <div style="margin-left:auto; font-weight:800" id="lb-my-score">120 pts</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY SCREEN (Hidden by default) -->
+    <div id="summary-screen" class="screen hidden">
+        <div class="screen-header">
+            <div class="screen-title">Mission Report</div>
+        </div>
+
+        <div class="summary-card">
+            <div style="color:var(--text-muted); text-transform:uppercase; font-size:0.8rem; font-weight:700;">Total
+                Score</div>
+            <div class="summary-score" id="sum-score">0</div>
+
+            <div class="metric_grid" style="margin-top:20px;">
+                <div class="metric_item">
+                    <div class="metric_value" id="sum-dist">0.0</div>
+                    <div class="metric_label">Distance</div>
+                </div>
+                <div class="metric_item">
+                    <div class="metric_value" id="sum-time">00:00</div>
+                    <div class="metric_label">Duration</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: auto;">
+            <button class="btn-game" onclick="hideSummary()">Return to Base</button>
+        </div>
+    </div>
+
+</body>
 
 </html>

@@ -16,13 +16,25 @@ var totalDistance = 0;
 function initMap() {
     // Default to a central location (e.g., New York) if geolocation fails
     // or wait for geolocation
-    map = L.map('map').setView([40.7128, -74.0060], 15);
+    const southWest = L.latLng(-85, -180);
+    const northEast = L.latLng(85, 180);
+    const bounds = L.latLngBounds(southWest, northEast);
+
+    map = L.map('map', {
+        zoomControl: false,
+        minZoom: 2,
+        maxZoom: 19,
+        maxBounds: bounds,
+        maxBoundsViscosity: 1.0
+    }).setView([40.7128, -74.0060], 15); // Hide default zoom
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+        noWrap: true
     }).addTo(map);
 
-    userPath = L.polyline([], { color: 'blue' }).addTo(map);
+    userPath = L.polyline([], { color: '#3b82f6', weight: 4, opacity: 0.8 }).addTo(map);
 
     // Load initial territories
     fetchTerritories();
@@ -35,30 +47,25 @@ function toggleTracking() {
 
     if (isTracking) {
         // Start
-        mainBtn.textContent = "Stop Activity";
-        document.getElementById("check_for_activity").style.background = "var(--success)";
-        document.getElementById("check_for_activity").style.boxShadow = "0 0 8px var(--success)";
+        mainBtn.textContent = "Stop Patrol";
+        mainBtn.classList.add("stop");
 
         startTimer();
         startGPS();
+        showToast("Patrol Started. Good luck!", "success");
     } else {
         // Stop
-        mainBtn.textContent = "Start Activity";
-        document.getElementById("check_for_activity").style.background = "var(--failed)";
-        document.getElementById("check_for_activity").style.boxShadow = "0 0 8px var(--failed)";
+        mainBtn.textContent = "Start Patrol";
+        mainBtn.classList.remove("stop");
 
         stopTimer();
         stopGPS();
+        showSummary(); // Show End Screen
     }
 }
 
 // Timer Logic
 function startTimer() {
-    startTime = Date.now() - (parseTimer() * 1000); // Resume if needed, or start fresh logic
-    // For simplicity, let's reset or continue. Let's assume continue for session.
-    // If we want reset on stop, we can do that. Let's just continue for now.
-
-    // Better: let's not reset for this demo, just accumulate.
     startTime = Date.now();
     timerInterval = setInterval(() => {
         const delta = Math.floor((Date.now() - startTime) / 1000);
@@ -72,18 +79,19 @@ function stopTimer() {
     clearInterval(timerInterval);
 }
 
-function parseTimer() {
-    // Helper if we wanted to resume, not used currently
-    return 0;
-}
-
 // GPS Logic
 function startGPS() {
     if ("geolocation" in navigator) {
+        const options = {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 15000
+        };
+
         watchId = navigator.geolocation.watchPosition(
             handlePosition,
             handleError,
-            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+            options
         );
     } else {
         alert("Geolocation is not supported by your browser.");
@@ -93,20 +101,77 @@ function startGPS() {
 
 function stopGPS() {
     if (watchId) navigator.geolocation.clearWatch(watchId);
+    if (accuracyCircle) map.removeLayer(accuracyCircle);
+    accuracyCircle = null;
 }
 
-function handlePosition(position) {
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
-    const accuracy = position.coords.accuracy;
+let lastUpdate = 0;
+let lastLat = null;
+let lastLng = null;
+let lastTime = null;
+let accuracyCircle = null;
 
-    // Update Map View (Center on user)
-    const latLng = [lat, lng];
+function handlePosition(position) {
+    const { latitude, longitude, accuracy, speed: gpsSpeed } = position.coords;
+    const now = Date.now();
+
+    // 1. Accuracy Filter (Relaxed)
+    if (accuracy > 1000) {
+        return;
+    }
+
+    // 2. Throttle Updates (1 sec)
+    if (now - lastUpdate < 1000) return;
+    lastUpdate = now;
+
+    let currentLat = latitude;
+    let currentLng = longitude;
+
+    // 3. Smoothing
+    if (lastLat !== null && lastLng !== null) {
+        currentLat = lastLat * 0.7 + latitude * 0.3;
+        currentLng = lastLng * 0.7 + longitude * 0.3;
+    }
+
+    // 4. Update UI
+    let speedKmh = gpsSpeed ? (gpsSpeed * 3.6) : 0;
+
+    // Fallback calc
+    if (!gpsSpeed && lastLat !== null && lastTime !== null) {
+        const distKm = getDistanceFromLatLonInKm(lastLat, lastLng, currentLat, currentLng);
+        const timeDiffHours = (now - lastTime) / 1000 / 3600;
+        if (timeDiffHours > 0) speedKmh = distKm / timeDiffHours;
+    }
+    if (speedKmh > 100) speedKmh = 0; // Cap
+
+    document.getElementById("speed").textContent = speedKmh.toFixed(1);
+
+    lastLat = currentLat;
+    lastLng = currentLng;
+    lastTime = now;
+
+    // 5. Update Map Visuals
+    const latLng = [currentLat, currentLng];
+
+    if (!accuracyCircle) {
+        accuracyCircle = L.circle(latLng, {
+            radius: accuracy,
+            color: '#3b82f6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.1,
+            weight: 1,
+            opacity: 0.3
+        }).addTo(map);
+    } else {
+        accuracyCircle.setLatLng(latLng);
+        accuracyCircle.setRadius(accuracy);
+    }
+
     if (!userMarker) {
         userMarker = L.circleMarker(latLng, {
             radius: 8,
             color: 'white',
-            fillColor: '#6366f1',
+            fillColor: '#3b82f6',
             fillOpacity: 1
         }).addTo(map);
         map.setView(latLng, 18);
@@ -115,25 +180,96 @@ function handlePosition(position) {
         map.panTo(latLng);
     }
 
-    // Update Path
     pathCoordinates.push(latLng);
     userPath.setLatLngs(pathCoordinates);
 
-    // Calculate Distance
     if (pathCoordinates.length > 1) {
         const lastPt = L.latLng(pathCoordinates[pathCoordinates.length - 2]);
         const currPt = L.latLng(latLng);
-        totalDistance += lastPt.distanceTo(currPt) / 1000; // km
+        totalDistance += lastPt.distanceTo(currPt) / 1000;
         document.getElementById("distance").textContent = totalDistance.toFixed(2);
     }
 
-    // Capture Territory
-    captureTerritory(lat, lng);
+    captureTerritory(currentLat, currentLng);
 }
 
-function handleError(error) {
-    console.error("GPS Error: ", error);
+// Helper
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = deg2rad(lat2 - lat1);
+    var dLon = deg2rad(lon2 - lon1);
+    var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    var d = R * c;
+    return d;
 }
+
+function deg2rad(deg) { return deg * (Math.PI / 180) }
+
+function handleError(error) { console.error("GPS Error: ", error); }
+
+
+// =========================
+// UI & SCREEN LOGIC
+// =========================
+
+function centerMap() {
+    if (userMarker) {
+        map.setView(userMarker.getLatLng(), 18);
+        showToast("Centered on Location");
+    } else {
+        showToast("No location yet...");
+    }
+}
+
+function showLeaderboard() {
+    // Update local score in LB
+    const currentScore = document.getElementById("myScore").textContent;
+    document.getElementById("lb-my-score").textContent = currentScore + " pts";
+
+    document.getElementById("leaderboard-screen").classList.remove("hidden");
+}
+
+function hideLeaderboard() {
+    document.getElementById("leaderboard-screen").classList.add("hidden");
+}
+
+function showSummary() {
+    const dist = document.getElementById("distance").textContent;
+    const time = document.getElementById("timer").textContent;
+    const score = document.getElementById("myScore").textContent;
+
+    document.getElementById("sum-dist").textContent = dist;
+    document.getElementById("sum-time").textContent = time;
+    document.getElementById("sum-score").textContent = score;
+
+    document.getElementById("summary-screen").classList.remove("hidden");
+}
+
+function hideSummary() {
+    document.getElementById("summary-screen").classList.add("hidden");
+    // Reset stats if needed
+    totalDistance = 0;
+    document.getElementById("distance").textContent = "0.00";
+    document.getElementById("timer").textContent = "00:00";
+}
+
+function showToast(msg) {
+    const container = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.innerHTML = `<span>🔔</span> ${msg}`;
+    container.appendChild(toast);
+
+    // Remove after anim (3s)
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
 
 // Backend Integration
 
@@ -142,10 +278,6 @@ function fetchTerritories() {
         .then(res => res.json())
         .then(data => {
             if (data.territories) {
-                // Clear existing territory layers if we were storing them (optional)
-                // For now, just drawing new ones. 
-                // In production, might want to clear layerGroup.
-
                 data.territories.forEach(t => {
                     drawTerritory(t.grid_id, t.color);
                 });
@@ -164,21 +296,21 @@ function captureTerritory(lat, lng) {
         .then(res => res.json())
         .then(data => {
             if (data.captured) {
-                drawTerritory(data.gridId, '#6366f1'); // User color
-                fetchTerritories(); // Refresh to update scores/rivals
+                drawTerritory(data.gridId, '#3b82f6'); // Neon Blue
+                fetchTerritories();
+                showToast("Zone Captured! +10 pts");
             }
         })
         .catch(err => console.error("Error updating location:", err));
 }
 
 function drawTerritory(gridId, color) {
-    // gridId is "latIndex,lngIndex"
-    // We need to convert back to bounds
-    // Resolution was 0.0001
+    if (conqueredGrids.has(gridId)) return;
 
-    if (conqueredGrids.has(gridId)) return; // Already drawn (simple check)
-    // Actually, we should allow redraw if color changes. 
-    // For specific implementation, let's just draw rects.
+    // Adjust color for neon theme if needed
+    // But backend sends hex, so we trust it or override
+    let drawColor = color;
+    if (color === '#6366f1') drawColor = '#3b82f6'; // Match neon blue
 
     const [latIdx, lngIdx] = gridId.split(',').map(Number);
     const lat = latIdx / 10000;
@@ -186,7 +318,12 @@ function drawTerritory(gridId, color) {
 
     const bounds = [[lat, lng], [lat + 0.0001, lng + 0.0001]];
 
-    L.rectangle(bounds, { color: color, weight: 1, fillOpacity: 0.4 }).addTo(map);
+    L.rectangle(bounds, {
+        color: drawColor,
+        weight: 1,
+        fillOpacity: 0.4,
+        className: 'territory-anim'
+    }).addTo(map);
     conqueredGrids.add(gridId);
 }
 
@@ -195,12 +332,12 @@ function updateScoreBoard(territories) {
     let rivalCount = 0;
 
     territories.forEach(t => {
-        if (t.color === '#6366f1') myCount++; // User
-        else rivalCount++; // Rival/Others
+        if (t.color === '#6366f1' || t.color === '#3b82f6') myCount++;
+        else rivalCount++;
     });
 
-    document.getElementById("myScore").textContent = myCount;
-    document.getElementById("enemyScore").textContent = rivalCount;
+    document.getElementById("myScore").textContent = myCount * 10; // 10 pts per zone
+    document.getElementById("enemyScore").textContent = rivalCount * 10;
 }
 
 // Initialize on Load
