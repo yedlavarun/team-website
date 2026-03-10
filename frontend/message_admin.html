@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Admin - Send Message</title>
+    <link rel="stylesheet" href="stylesheet.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800;900&display=swap"
+        rel="stylesheet" />
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-dark);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .admin-panel {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        h2 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            margin-bottom: 20px;
+            font-family: inherit;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            border: none;
+            border-radius: var(--radius-md);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .status {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+            min-height: 20px;
+        }
+
+        .success {
+            color: var(--success);
+        }
+
+        .error {
+            color: var(--enemy);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="admin-panel">
+        <h2>📢 Send Broadcast</h2>
+        <input type="text" id="msgInput" placeholder="Enter message for players..." />
+        <button onclick="sendMessage()">Send to Game</button>
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        async function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const status = document.getElementById('status');
+            const content = input.value.trim();
+
+            if (!content) {
+                status.textContent = "Please enter a message.";
+                status.className = "status error";
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+
+                if (res.ok) {
+                    status.textContent = "Message Broadcasted Successfully! 📡";
+                    status.className = "status success";
+                    input.value = "";
+                } else {
+                    throw new Error("Failed to send");
+                }
+            } catch (err) {
+                status.textContent = "Error sending message.";
+                status.className = "status error";
+                console.error(err);
+            }
+        }
+    </script>
+
+</body>
+
+</html>

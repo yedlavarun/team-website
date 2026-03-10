@@ -340,5 +340,23 @@ function updateScoreBoard(territories) {
     document.getElementById("enemyScore").textContent = rivalCount * 10;
 }
 
+// Message Logic
+async function loadMessage() {
+    try {
+        const res = await fetch(`${API_URL}/message`);
+        const data = await res.json();
+        const msgEl = document.getElementById('gameMessage');
+        if (data.content && msgEl) {
+            msgEl.textContent = data.content;
+        }
+    } catch (err) {
+        console.error("Error fetching message:", err);
+    }
+}
+
 // Initialize on Load
-window.addEventListener('load', initMap);
+window.addEventListener('load', () => {
+    initMap();
+    loadMessage();
+    setInterval(loadMessage, 10000); // 10s refresh
+});

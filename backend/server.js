@@ -49,6 +49,15 @@ function initializeDatabase() {
         // Insert default users if they don't exist
         db.run(`INSERT OR IGNORE INTO users (id, username, color) VALUES (1, 'You', '#6366f1')`);
         db.run(`INSERT OR IGNORE INTO users (id, username, color) VALUES (2, 'Rival', '#ef4444')`);
+
+        // Create Messages table
+        db.run(`CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        db.run(`INSERT OR IGNORE INTO messages (id, content) VALUES (1, 'Welcome to Cardio Territory Wars!')`);
     });
 }
 
@@ -140,6 +149,30 @@ app.get('/api/scores', (req, res) => {
             return;
         }
         res.json({ scores: rows });
+    });
+});
+
+// Messages API
+app.get('/api/message', (req, res) => {
+    db.get('SELECT content FROM messages ORDER BY id DESC LIMIT 1', [], (err, row) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(row || { content: 'No messages yet.' });
+    });
+});
+
+app.post('/api/message', (req, res) => {
+    const { content } = req.body;
+    if (!content) {
+        return res.status(400).json({ error: 'Content required' });
+    }
+    db.run('INSERT INTO messages (content) VALUES (?)', [content], function (err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: 'Message posted', id: this.lastID });
     });
 });
 

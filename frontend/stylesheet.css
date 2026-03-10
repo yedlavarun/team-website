@@ -137,8 +137,35 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
-    margin-top: 10px;
+    margin-bottom: 20px;
     text-align: center;
+}
+
+.game-message {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--primary);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-weight: 500;
+    margin-bottom: 15px;
+    box-shadow: 0 0 15px var(--primary-glow);
+    font-size: 0.95rem;
+    animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .stat-value {

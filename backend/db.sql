@@ -19,3 +19,13 @@ CREATE TABLE IF NOT EXISTS territories (
 -- Default Users
 INSERT OR IGNORE INTO users (id, username, color) VALUES (1, 'You', '#6366f1');
 INSERT OR IGNORE INTO users (id, username, color) VALUES (2, 'Rival', '#ef4444');
+
+-- Messages Table
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Default Message
+INSERT OR IGNORE INTO messages (id, content) VALUES (1, 'Welcome to Cardio Territory Wars!');

@@ -29,18 +29,6 @@
     <!-- HUD Overlay Layer -->
     <div id="hud_layer">
 
-        <!-- Top Left: Team & Status -->
-        <div class="top-bar hud-element">
-            <div class="team-badge">
-                <div class="team-name">Blue Squad</div>
-            </div>
-
-            <div class="status-indicators">
-                <div class="status-dot active" title="Online"></div>
-                <div class="status-dot active" title="GPS Locked"></div>
-            </div>
-        </div>
-
         <!-- Floating Stats Panel -->
         <div class="stats-panel hud-element">
             <div class="stat-item">
@@ -54,6 +42,21 @@
             <div class="stat-item">
                 <div class="stat-value"><span id="speed">0.0</span></div>
                 <div class="stat-label">Km/h</div>
+            </div>
+        </div>
+
+        <!-- Game Message Banner -->
+        <div id="gameMessage" class="game-message hud-element">Loading mission intel...</div>
+
+        <!-- Top Left: Team & Status -->
+        <div class="top-bar hud-element">
+            <div class="team-badge">
+                <div class="team-name">Blue Squad</div>
+            </div>
+
+            <div class="status-indicators">
+                <div class="status-dot active" title="Online"></div>
+                <div class="status-dot active" title="GPS Locked"></div>
             </div>
         </div>
 
