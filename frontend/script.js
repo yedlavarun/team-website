@@ -354,6 +354,62 @@ async function loadMessage() {
     }
 }
 
+// ── Save run to Dashboard (requires user to be logged in) ───────────────────
+async function saveRunToDashboard() {
+    const msgEl  = document.getElementById('save-run-msg');
+    const btn    = document.getElementById('save-run-btn');
+    const token  = localStorage.getItem('cw_token');
+
+    if (!token) {
+        msgEl.style.color = '#ef4444';
+        msgEl.textContent = '⚠️ Log in from the Dashboard first to save runs.';
+        return;
+    }
+
+    // Collect run stats
+    const distText = document.getElementById('distance').textContent;
+    const timeText = document.getElementById('timer').textContent;
+    const distance = parseFloat(distText) || 0;
+
+    if (distance < 0.01) {
+        msgEl.style.color = '#ef4444';
+        msgEl.textContent = '⚠️ No distance recorded — start a patrol first!';
+        return;
+    }
+
+    // Parse timer mm:ss → minutes
+    const [mm, ss]   = timeText.split(':').map(Number);
+    const duration   = mm + Math.round(ss / 60);
+    const avgSpeed   = duration > 0 ? (distance / (duration / 60)) : 0;
+    const calories   = Math.round(distance * 60 + avgSpeed * 5); // rough estimate
+
+    btn.disabled     = true;
+    msgEl.textContent = 'Saving…';
+
+    try {
+        const res = await fetch(`${API_URL}/sessions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ distance, avgSpeed, duration, calories })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+
+        msgEl.style.color  = '#22d3ee';
+        msgEl.textContent  = `✅ Run saved! +${data.xpGained} XP earned`;
+        btn.textContent    = '✔ Saved';
+
+    } catch (err) {
+        msgEl.style.color  = '#ef4444';
+        msgEl.textContent  = `❌ ${err.message}`;
+        btn.disabled       = false;
+    }
+}
+
 // Initialize on Load
 window.addEventListener('load', () => {
     initMap();

@@ -5,87 +5,123 @@ const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors()); // Allow requests from Live Server
+// ─── Middleware ────────────────────────────────────────────────────────────────
+app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '../frontend'))); // Serve static files from frontend
+app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Default route
+// Default route → serve game map
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Database Setup
+// ─── Database ──────────────────────────────────────────────────────────────────
 const dbPath = path.resolve(__dirname, 'game.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
+        process.exit(1);
     } else {
-        console.log('Connected to the SQLite database.');
+        console.log('✅ Connected to SQLite database.');
         initializeDatabase();
     }
 });
 
 function initializeDatabase() {
     db.serialize(() => {
-        // Create Users table
+
+        // ── Users (extended with auth + gamification fields) ────────────────
         db.run(`CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            color TEXT,
-            score INTEGER DEFAULT 0
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            username      TEXT UNIQUE NOT NULL,
+            email         TEXT UNIQUE,
+            password_hash TEXT,
+            color         TEXT DEFAULT '#6366f1',
+            score         INTEGER DEFAULT 0,
+            xp            INTEGER DEFAULT 0,
+            level         INTEGER DEFAULT 1,
+            streak        INTEGER DEFAULT 0,
+            created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
-        // Create Territories table
-        // grid_id is a string "latIndex,lngIndex"
+        // ── Stats (one row per user, auto-aggregated) ───────────────────────
+        db.run(`CREATE TABLE IF NOT EXISTS stats (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id         INTEGER UNIQUE,
+            total_distance  REAL DEFAULT 0,
+            avg_speed       REAL DEFAULT 0,
+            calories_burned REAL DEFAULT 0,
+            workout_count   INTEGER DEFAULT 0,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )`);
+
+        // ── Workout Sessions ────────────────────────────────────────────────
+        db.run(`CREATE TABLE IF NOT EXISTS sessions (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL,
+            distance    REAL NOT NULL,
+            avg_speed   REAL NOT NULL,
+            duration    INTEGER NOT NULL,
+            calories    REAL NOT NULL,
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )`);
+
+        // ── Territories (unchanged) ─────────────────────────────────────────
         db.run(`CREATE TABLE IF NOT EXISTS territories (
-            grid_id TEXT PRIMARY KEY,
+            grid_id  TEXT PRIMARY KEY,
             owner_id INTEGER,
             FOREIGN KEY(owner_id) REFERENCES users(id)
         )`);
 
-        // Insert default users if they don't exist
-        db.run(`INSERT OR IGNORE INTO users (id, username, color) VALUES (1, 'You', '#6366f1')`);
-        db.run(`INSERT OR IGNORE INTO users (id, username, color) VALUES (2, 'Rival', '#ef4444')`);
-
-        // Create Messages table
+        // ── Messages ────────────────────────────────────────────────────────
         db.run(`CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            content    TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
-        db.run(`INSERT OR IGNORE INTO messages (id, content) VALUES (1, 'Welcome to Cardio Territory Wars!')`);
+        // Seed defaults
+        db.run(`INSERT OR IGNORE INTO messages (id, content) VALUES (1, 'Welcome to Cardio Wars! 🏃')`);
+
+        console.log('✅ Database schema ready.');
     });
 }
 
-// Helper: Convert Lat/Lng to Grid ID
-// Approx 11 meters resolution (0.0001 degrees)
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
+// Auth (register / login / me)
+app.use('/api/auth', require('./routes/auth')(db));
+
+// Sessions (protected — workout tracking)
+app.use('/api/sessions', require('./routes/sessions')(db));
+
+// Leaderboard (public)
+app.use('/api/leaderboard', require('./routes/leaderboard')(db));
+
+// ── Territory game routes (original, preserved) ─────────────────────────────
+
+// Helper: Convert Lat/Lng to Grid ID (~11m resolution)
 function getGridId(lat, lng) {
     const latIndex = Math.floor(lat * 10000);
     const lngIndex = Math.floor(lng * 10000);
     return `${latIndex},${lngIndex}`;
 }
 
-// Routes
-
-// Get all territories
+// GET all territories
 app.get('/api/territories', (req, res) => {
     const sql = `SELECT t.grid_id, u.color 
                  FROM territories t 
                  JOIN users u ON t.owner_id = u.id`;
     db.all(sql, [], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
+        if (err) return res.status(500).json({ error: err.message });
         res.json({ territories: rows });
     });
 });
 
-// Update location and conquer territory
+// POST update location / conquer territory
 app.post('/api/update-location', (req, res) => {
     const { lat, lng, userId } = req.body;
 
@@ -95,87 +131,58 @@ app.post('/api/update-location', (req, res) => {
 
     const gridId = getGridId(lat, lng);
 
-    // Check who owns this grid
     db.get(`SELECT owner_id FROM territories WHERE grid_id = ?`, [gridId], (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
+        if (err) return res.status(500).json({ error: err.message });
 
         if (!row || row.owner_id !== userId) {
-            // New territory or capturing enemy territory
             const sql = `INSERT INTO territories (grid_id, owner_id) 
                          VALUES (?, ?) 
                          ON CONFLICT(grid_id) DO UPDATE SET owner_id = ?`;
-
             db.run(sql, [gridId, userId, userId], function (err) {
-                if (err) {
-                    return res.status(500).json({ error: err.message });
-                }
+                if (err) return res.status(500).json({ error: err.message });
 
-                // Update scores
-                updateScores();
-
-                res.json({
-                    message: 'Territory captured',
-                    gridId: gridId,
-                    captured: true
-                });
+                updateTerritoryScores();
+                res.json({ message: 'Territory captured', gridId, captured: true });
             });
         } else {
-            // Already owned by user
-            res.json({
-                message: 'Already owned',
-                gridId: gridId,
-                captured: false
-            });
+            res.json({ message: 'Already owned', gridId, captured: false });
         }
     });
 });
 
-function updateScores() {
-    // Recalculate scores based on territory count
-    const sql = `UPDATE users 
-                 SET score = (SELECT COUNT(*) FROM territories WHERE owner_id = users.id)`;
-    db.run(sql, (err) => {
-        if (err) console.error("Error updating scores:", err);
-    });
+function updateTerritoryScores() {
+    db.run(
+        `UPDATE users SET score = (SELECT COUNT(*) FROM territories WHERE owner_id = users.id)`,
+        (err) => { if (err) console.error('Score update error:', err); }
+    );
 }
 
-// Get scores
+// GET scores
 app.get('/api/scores', (req, res) => {
-    db.all(`SELECT id, username, score FROM users`, [], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
+    db.all(`SELECT id, username, color, score, xp, level FROM users`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
         res.json({ scores: rows });
     });
 });
 
-// Messages API
+// GET / POST messages
 app.get('/api/message', (req, res) => {
     db.get('SELECT content FROM messages ORDER BY id DESC LIMIT 1', [], (err, row) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
+        if (err) return res.status(500).json({ error: err.message });
         res.json(row || { content: 'No messages yet.' });
     });
 });
 
 app.post('/api/message', (req, res) => {
     const { content } = req.body;
-    if (!content) {
-        return res.status(400).json({ error: 'Content required' });
-    }
+    if (!content) return res.status(400).json({ error: 'Content required' });
     db.run('INSERT INTO messages (content) VALUES (?)', [content], function (err) {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
+        if (err) return res.status(500).json({ error: err.message });
         res.json({ message: 'Message posted', id: this.lastID });
     });
 });
 
+// ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Cardio Wars server running on http://localhost:${PORT}`);
 });

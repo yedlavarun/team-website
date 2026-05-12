@@ -62,8 +62,9 @@
 
         <!-- Floating Map Actions (Right Side) -->
         <div class="map-actions hud-element">
-            <div class="fab" onclick="centerMap()">📍</div>
-            <div class="fab" onclick="showLeaderboard()">🏆</div>
+            <div class="fab" onclick="centerMap()" title="Center Map">📍</div>
+            <div class="fab" onclick="showLeaderboard()" title="Leaderboard">🏆</div>
+            <a class="fab" href="dashboard.html" title="My Dashboard" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">📊</a>
         </div>
 
         <!-- Bottom Controls -->
@@ -146,9 +147,11 @@
             </div>
         </div>
 
-        <div style="margin-top: auto;">
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn-game" id="save-run-btn" onclick="saveRunToDashboard()" style="background: linear-gradient(135deg,#6366f1,#8b5cf6);">💾 Save Run to Dashboard</button>
             <button class="btn-game" onclick="hideSummary()">Return to Base</button>
         </div>
+        <div id="save-run-msg" style="text-align:center;font-size:12px;margin-top:8px;color:#22d3ee;"></div>
     </div>
 
 </body>

@@ -1,442 +1,145 @@
-# Cardio Wars - Run Instructions
+# ⚡ Cardio Wars
+
+> **Run. Conquer. Dominate.**
+> A location-based fitness game with territory capture, XP system, workout tracking, and leaderboard.
+
+---
+
+## Architecture
+
+```
+team-website/
+ ├── backend/
+ │    ├── middleware/
+ │    │    └── auth.js          ← JWT verification
+ │    ├── routes/
+ │    │    ├── auth.js          ← Register / Login / Me
+ │    │    ├── sessions.js      ← Workout session API
+ │    │    └── leaderboard.js  ← XP + Territory rankings
+ │    ├── server.js             ← Express app
+ │    ├── db.sql                ← Schema reference
+ │    └── package.json
+ └── frontend/
+      ├── index.html            ← Territory map game
+      ├── script.js             ← Map game logic + save-run bridge
+      ├── stylesheet.css        ← Map styles
+      ├── dashboard.html        ← Stats dashboard (NEW)
+      ├── dashboard.css         ← Dashboard styles (NEW)
+      └── dashboard.js          ← Dashboard logic (NEW)
+```
+
+---
 
 ## Prerequisites
-- Node.js installed.
-- VS Code with "Live Server" extension (recommended).
+
+- **Node.js** v18+
+- A modern browser (Chrome / Firefox / Edge)
+
+---
 
 ## 1. Backend Setup
-The backend handles the database and territory logic.
 
-1. Open a terminal in the project root.
-2. Navigate to the backend folder:
-   ```sh
-   cd backend
-   ```
-3. Install dependencies:
-   ```sh
-   npm install
-   ```
-4. Start the server:
-   ```sh
-   node server.js
-   ```
-   You should see: `Server running on port 3000` and `Connected to the SQLite database.`
+```powershell
+cd backend
+npm install
+node server.js
+```
 
-## 2. Frontend Setup
-The frontend displays the map and tracks your location.
+You should see:
+```
+✅ Connected to SQLite database.
+✅ Database schema ready.
+🚀 Cardio Wars server running on http://localhost:3000
+```
 
-1. Open `frontend/index.html` in VS Code.
-2. Right-click and select **"Open with Live Server"**.
-3. Accept the **Location Permission** request in your browser.
+> **Note:** The `game.db` SQLite file is created automatically on first run.
+> If upgrading from v1, delete the old `game.db` so the new schema is applied cleanly.
+
+---
+
+## 2. Open the App
+
+### Dashboard (Recommended Starting Point)
+Open in browser:
+```
+http://localhost:3000/dashboard.html
+```
+- Create an account
+- Log workouts manually **or** play the map and tap "Save Run to Dashboard"
+- Track XP, stats, and leaderboard rankings
+
+### Territory Map Game
+```
+http://localhost:3000
+```
+Or open `frontend/index.html` with VS Code Live Server (backend must be running).
+
+---
 
 ## 3. How to Play
-1. 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Click **"Start Activity"**.
-2. Walk or Run! (Or mock your location using Chrome DevTools -> More tools -> Sensors).
-3. As you move, blue rectangles will appear on the map, marking your territory.
-4. The dashboard will update your distance and score.
+### Map Game
+1. Click **"Start Patrol"** in the map view.
+2. Walk or run — blue tiles appear as you conquer territory.
+3. Click **"Stop Patrol"** to end.
+4. On the Mission Report screen, tap **"💾 Save Run to Dashboard"**
+   (requires being logged in to the Dashboard first).
+
+### Dashboard
+1. Register / Login at `http://localhost:3000/dashboard.html`
+2. View your stats (distance, speed, calories, XP, streak)
+3. Use **"Log Workout"** to manually add a session
+4. Check the **Leaderboard** to see how you rank
+
+---
+
+## API Reference
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | ❌ | Create account |
+| POST | `/api/auth/login` | ❌ | Login, get JWT |
+| GET | `/api/auth/me` | ✅ | Current user profile |
+| POST | `/api/sessions` | ✅ | Log a workout session |
+| GET | `/api/sessions` | ✅ | Get session history |
+| GET | `/api/sessions/stats` | ✅ | Get aggregated stats |
+| GET | `/api/leaderboard` | ✅ | XP leaderboard |
+| GET | `/api/leaderboard/territory` | ✅ | Territory leaderboard |
+| GET | `/api/territories` | ❌ | All map territories |
+| POST | `/api/update-location` | ❌ | Capture territory (map game) |
+| GET | `/api/scores` | ❌ | Territory scores |
+
+> ✅ = Requires `Authorization: Bearer <token>` header
+
+---
+
+## XP System
+
+```
+XP per session = ROUND(distance_km × 10 + avgSpeed × 2)
+Level = FLOOR(totalXP / 500) + 1
+```
+
+---
 
 ## Troubleshooting
-- **Map not loading?** Check your internet connection (Leaflet needs to load tiles).
-- **"Geolocation denied"?** Allow location access in your browser settings.
-- **Scores not updating?** Ensure the backend server is running on port 3000.
+
+| Problem | Fix |
+|---------|-----|
+| Map not loading | Check internet (Leaflet needs tile CDN) |
+| "Geolocation denied" | Allow location in browser settings |
+| "No token" when saving run | Log in via Dashboard first, then return to map |
+| DB schema errors | Delete `backend/game.db` and restart server |
+| `bcrypt` install fails | Run `npm install` inside `backend/` directory |
+
+---
+
+## Future Path
+
+| Now | Later |
+|-----|-------|
+| JWT + bcrypt | Firebase Auth |
+| SQLite | Firestore / PostgreSQL |
+| Local `game.db` | Cloud database |
+
+Service-layer pattern in `routes/` makes this swap easy — business logic stays the same.
