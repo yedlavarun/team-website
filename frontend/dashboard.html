@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardio Wars — Dashboard</title>
+    <meta name="description" content="Track your workouts, compete on the leaderboard, and dominate the Cardio Wars fitness challenge.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+<!-- ══════════════ AUTH OVERLAY ══════════════ -->
+<div id="auth-overlay" class="auth-overlay">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <span class="logo-icon">⚡</span>
+            <h1>Cardio Wars</h1>
+            <p>Run. Conquer. Dominate.</p>
+        </div>
+
+        <!-- Tab switcher -->
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Login</button>
+            <button class="auth-tab" id="tab-register" onclick="showAuthTab('register')">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+            <div class="field-group">
+                <label>Email</label>
+                <input type="email" id="login-email" placeholder="you@example.com" required>
+            </div>
+            <div class="field-group">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="••••••••" required>
+            </div>
+            <div id="login-error" class="auth-error hidden"></div>
+            <button type="submit" class="btn-primary" id="login-btn">
+                <span>Enter the Battle</span>
+            </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" class="auth-form hidden" onsubmit="handleRegister(event)">
+            <div class="field-group">
+                <label>Username</label>
+                <input type="text" id="reg-username" placeholder="RunnerXX99" required minlength="3">
+            </div>
+            <div class="field-group">
+                <label>Email</label>
+                <input type="email" id="reg-email" placeholder="you@example.com" required>
+            </div>
+            <div class="field-group">
+                <label>Password</label>
+                <input type="password" id="reg-password" placeholder="Min 6 characters" required minlength="6">
+            </div>
+            <div id="reg-error" class="auth-error hidden"></div>
+            <button type="submit" class="btn-primary" id="register-btn">
+                <span>Create Account</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app" class="app hidden">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <span>⚡</span>
+            <span>Cardio Wars</span>
+        </div>
+        <div class="sidebar-nav">
+            <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+                <span class="nav-icon">📊</span> Dashboard
+            </button>
+            <button class="nav-item" id="nav-workout" onclick="showPage('workout')">
+                <span class="nav-icon">🏃</span> Log Workout
+            </button>
+            <button class="nav-item" id="nav-map" onclick="openMap()">
+                <span class="nav-icon">🏃</span> Run Tracker
+            </button>
+            <button class="nav-item" id="nav-leaderboard" onclick="showPage('leaderboard')">
+                <span class="nav-icon">🏆</span> Leaderboard
+            </button>
+            <button class="nav-item" id="nav-profile" onclick="showPage('profile')">
+                <span class="nav-icon">👤</span> Profile
+            </button>
+        </div>
+        <div class="sidebar-bottom">
+            <div class="user-chip" id="sidebar-user">
+                <div class="user-avatar" id="sidebar-avatar">?</div>
+                <div class="user-info">
+                    <span id="sidebar-username">Loading...</span>
+                    <span id="sidebar-level" class="level-badge">Lvl 1</span>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Mobile top bar -->
+    <header class="mobile-header">
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <span class="mobile-title">⚡ Cardio Wars</span>
+        <div class="mobile-avatar" id="mobile-avatar">?</div>
+    </header>
+
+    <!-- Pages -->
+    <main class="main-content">
+
+        <!-- ── Dashboard Page ── -->
+        <section id="page-dashboard" class="page active">
+            <div class="page-header">
+                <div>
+                    <h2 id="greeting">Good morning, Warrior!</h2>
+                    <p class="subtitle">Here's your battle report</p>
+                </div>
+                <div class="streak-badge" id="streak-display">
+                    🔥 <span id="streak-count">0</span> day streak
+                </div>
+            </div>
+
+            <!-- XP Progress Bar -->
+            <div class="xp-card">
+                <div class="xp-header">
+                    <span>Level <span id="xp-level">1</span></span>
+                    <span><span id="xp-current">0</span> / <span id="xp-next">500</span> XP</span>
+                </div>
+                <div class="xp-bar">
+                    <div class="xp-fill" id="xp-fill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Stat cards -->
+            <div class="stats-grid">
+                <div class="stat-card" id="card-distance">
+                    <div class="stat-icon">📏</div>
+                    <div class="stat-value" id="stat-distance">0.0</div>
+                    <div class="stat-label">Total km</div>
+                    <div class="stat-trend">↑ All time</div>
+                </div>
+                <div class="stat-card" id="card-speed">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-value" id="stat-speed">0.0</div>
+                    <div class="stat-label">Avg km/h</div>
+                    <div class="stat-trend">All sessions</div>
+                </div>
+                <div class="stat-card" id="card-calories">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-value" id="stat-calories">0</div>
+                    <div class="stat-label">Calories Burned</div>
+                    <div class="stat-trend">Total</div>
+                </div>
+                <div class="stat-card" id="card-workouts">
+                    <div class="stat-icon">🏅</div>
+                    <div class="stat-value" id="stat-workouts">0</div>
+                    <div class="stat-label">Workouts</div>
+                    <div class="stat-trend">Completed</div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Recent Activity</h3>
+                    <span class="chart-subtitle">Last 7 sessions</span>
+                </div>
+                <canvas id="activityChart" height="120"></canvas>
+            </div>
+
+            <!-- Session history -->
+            <div class="sessions-card">
+                <div class="sessions-header">
+                    <h3>Workout History</h3>
+                    <button class="btn-sm" onclick="showPage('workout')">+ Log Workout</button>
+                </div>
+                <div id="sessions-list" class="sessions-list">
+                    <div class="empty-state">No workouts yet. Get moving! 🏃</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Log Workout Page ── -->
+        <section id="page-workout" class="page">
+            <div class="page-header">
+                <div>
+                    <h2>Log Workout</h2>
+                    <p class="subtitle">Record your session and earn XP</p>
+                </div>
+            </div>
+
+            <div class="form-card">
+                <form id="workout-form" onsubmit="handleLogWorkout(event)">
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label>Distance (km)</label>
+                            <input type="number" id="w-distance" step="0.1" min="0.1" placeholder="5.0" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Avg Speed (km/h)</label>
+                            <input type="number" id="w-speed" step="0.1" min="0.1" placeholder="8.5" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Duration (minutes)</label>
+                            <input type="number" id="w-duration" min="1" placeholder="35" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Calories Burned</label>
+                            <input type="number" id="w-calories" min="1" placeholder="320" required>
+                        </div>
+                    </div>
+
+                    <div id="xp-preview" class="xp-preview hidden">
+                        You'll earn <strong id="xp-preview-value">0</strong> XP for this session!
+                    </div>
+
+                    <div id="workout-error" class="auth-error hidden"></div>
+                    <div id="workout-success" class="auth-success hidden"></div>
+
+                    <button type="submit" class="btn-primary" id="workout-btn">
+                        <span>⚡ Save Workout & Earn XP</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ── Leaderboard Page ── -->
+        <section id="page-leaderboard" class="page">
+            <div class="page-header">
+                <div>
+                    <h2>🏆 Leaderboard</h2>
+                    <p class="subtitle">Top warriors ranked by XP</p>
+                </div>
+            </div>
+            <div class="leaderboard-list" id="leaderboard-list">
+                <div class="loading-spinner">Loading...</div>
+            </div>
+        </section>
+
+        <!-- ── Profile Page ── -->
+        <section id="page-profile" class="page">
+            <div class="page-header">
+                <h2>My Profile</h2>
+            </div>
+            <div class="profile-card">
+                <div class="profile-avatar-large" id="profile-avatar">W</div>
+                <div class="profile-info">
+                    <h3 id="profile-username">—</h3>
+                    <p id="profile-email" class="profile-email">—</p>
+                    <div class="profile-badges">
+                        <span class="badge" id="profile-level">Level 1</span>
+                        <span class="badge badge-xp" id="profile-xp">0 XP</span>
+                        <span class="badge badge-streak" id="profile-streak">🔥 0 streak</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-grid" id="profile-stats-grid">
+                <!-- populated by JS -->
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
