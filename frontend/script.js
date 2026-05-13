@@ -1,21 +1,23 @@
 // Configuration
-const API_URL = 'http://localhost:3000/api';
-const USER_ID = 1; // "You"
+const API_URL = '/api';
 
 // State
-var isTracking = false;
-var map, userMarker, userPath;
-var pathCoordinates = [];
-var conqueredGrids = new Set();
-var watchId;
-var timerInterval;
-var startTime;
-var totalDistance = 0;
+let isTracking = false;
+let map, userMarker, userPath;
+let pathCoordinates = [];
+let watchId;
+let timerInterval;
+let startTime;
+let totalDistance = 0;
+let accuracyCircle = null;
+
+let lastUpdate = 0;
+let lastLat = null;
+let lastLng = null;
+let lastTime = null;
 
 // Initialize Map
 function initMap() {
-    // Default to a central location (e.g., New York) if geolocation fails
-    // or wait for geolocation
     const southWest = L.latLng(-85, -180);
     const northEast = L.latLng(85, 180);
     const bounds = L.latLngBounds(southWest, northEast);
@@ -26,7 +28,7 @@ function initMap() {
         maxZoom: 19,
         maxBounds: bounds,
         maxBoundsViscosity: 1.0
-    }).setView([40.7128, -74.0060], 15); // Hide default zoom
+    }).setView([40.7128, -74.0060], 15);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
@@ -34,43 +36,45 @@ function initMap() {
         noWrap: true
     }).addTo(map);
 
-    userPath = L.polyline([], { color: '#3b82f6', weight: 4, opacity: 0.8 }).addTo(map);
-
-    // Load initial territories
-    fetchTerritories();
+    userPath = L.polyline([], {
+        color: '#3b82f6',
+        weight: 4,
+        opacity: 0.8
+    }).addTo(map);
 }
 
-// Start/Stop Tracking Logic
+// Start/Stop Tracking
 function toggleTracking() {
     isTracking = !isTracking;
     const mainBtn = document.getElementById("mainBtn");
 
     if (isTracking) {
-        // Start
-        mainBtn.textContent = "Stop Patrol";
+        mainBtn.textContent = "Stop Run";
         mainBtn.classList.add("stop");
 
         startTimer();
         startGPS();
-        showToast("Patrol Started. Good luck!", "success");
+        showToast("Run started");
     } else {
-        // Stop
-        mainBtn.textContent = "Start Patrol";
+        mainBtn.textContent = "Start Run";
         mainBtn.classList.remove("stop");
 
         stopTimer();
         stopGPS();
-        showSummary(); // Show End Screen
+        logRun();
+        showSummary();
     }
 }
 
-// Timer Logic
+// Timer
 function startTimer() {
     startTime = Date.now();
+
     timerInterval = setInterval(() => {
         const delta = Math.floor((Date.now() - startTime) / 1000);
         const m = Math.floor(delta / 60).toString().padStart(2, '0');
         const s = (delta % 60).toString().padStart(2, '0');
+
         document.getElementById("timer").textContent = `${m}:${s}`;
     }, 1000);
 }
@@ -79,70 +83,80 @@ function stopTimer() {
     clearInterval(timerInterval);
 }
 
-// GPS Logic
+// GPS
 function startGPS() {
     if ("geolocation" in navigator) {
-        const options = {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 15000
-        };
-
         watchId = navigator.geolocation.watchPosition(
             handlePosition,
             handleError,
-            options
+            {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 15000
+            }
         );
     } else {
         alert("Geolocation is not supported by your browser.");
-        toggleTracking(); // Turn off
+        toggleTracking();
     }
 }
 
 function stopGPS() {
     if (watchId) navigator.geolocation.clearWatch(watchId);
-    if (accuracyCircle) map.removeLayer(accuracyCircle);
-    accuracyCircle = null;
+
+    if (accuracyCircle) {
+        map.removeLayer(accuracyCircle);
+        accuracyCircle = null;
+    }
 }
 
-let lastUpdate = 0;
-let lastLat = null;
-let lastLng = null;
-let lastTime = null;
-let accuracyCircle = null;
+function logRun() {
+    const distance = document.getElementById("distance").textContent;
+    const time = document.getElementById("timer").textContent;
+    const avg_velocity = document.getElementById("speed").textContent;
+
+    fetch(`${API_URL}/log-run`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            distance: distance,
+            time: time,
+            avg_velocity: avg_velocity
+        })
+    });
+}
 
 function handlePosition(position) {
     const { latitude, longitude, accuracy, speed: gpsSpeed } = position.coords;
     const now = Date.now();
 
-    // 1. Accuracy Filter (Relaxed)
-    if (accuracy > 1000) {
-        return;
-    }
-
-    // 2. Throttle Updates (1 sec)
+    if (accuracy > 1000) return;
     if (now - lastUpdate < 1000) return;
+
     lastUpdate = now;
 
     let currentLat = latitude;
     let currentLng = longitude;
 
-    // 3. Smoothing
     if (lastLat !== null && lastLng !== null) {
         currentLat = lastLat * 0.7 + latitude * 0.3;
         currentLng = lastLng * 0.7 + longitude * 0.3;
     }
 
-    // 4. Update UI
-    let speedKmh = gpsSpeed ? (gpsSpeed * 3.6) : 0;
+    let speedKmh = gpsSpeed ? gpsSpeed * 3.6 : 0;
 
-    // Fallback calc
     if (!gpsSpeed && lastLat !== null && lastTime !== null) {
         const distKm = getDistanceFromLatLonInKm(lastLat, lastLng, currentLat, currentLng);
         const timeDiffHours = (now - lastTime) / 1000 / 3600;
-        if (timeDiffHours > 0) speedKmh = distKm / timeDiffHours;
+
+        if (timeDiffHours > 0) {
+            speedKmh = distKm / timeDiffHours;
+        }
     }
-    if (speedKmh > 100) speedKmh = 0; // Cap
+
+    if (speedKmh > 100) speedKmh = 0;
 
     document.getElementById("speed").textContent = speedKmh.toFixed(1);
 
@@ -150,7 +164,6 @@ function handlePosition(position) {
     lastLng = currentLng;
     lastTime = now;
 
-    // 5. Update Map Visuals
     const latLng = [currentLat, currentLng];
 
     if (!accuracyCircle) {
@@ -174,6 +187,7 @@ function handlePosition(position) {
             fillColor: '#3b82f6',
             fillOpacity: 1
         }).addTo(map);
+
         map.setView(latLng, 18);
     } else {
         userMarker.setLatLng(latLng);
@@ -186,158 +200,128 @@ function handlePosition(position) {
     if (pathCoordinates.length > 1) {
         const lastPt = L.latLng(pathCoordinates[pathCoordinates.length - 2]);
         const currPt = L.latLng(latLng);
+
         totalDistance += lastPt.distanceTo(currPt) / 1000;
         document.getElementById("distance").textContent = totalDistance.toFixed(2);
     }
-
-    captureTerritory(currentLat, currentLng);
 }
 
-// Helper
+function handleError(error) {
+    console.error("GPS Error:", error);
+    showToast("GPS error");
+}
+
+// Helpers
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = deg2rad(lat2 - lat1);
-    var dLon = deg2rad(lon2 - lon1);
-    var a =
+    const R = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+
+    const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    var d = R * c;
-    return d;
+        Math.cos(deg2rad(lat1)) *
+        Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
 
-function deg2rad(deg) { return deg * (Math.PI / 180) }
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+}
 
-function handleError(error) { console.error("GPS Error: ", error); }
-
-
-// =========================
-// UI & SCREEN LOGIC
-// =========================
-
+// UI
 function centerMap() {
     if (userMarker) {
         map.setView(userMarker.getLatLng(), 18);
-        showToast("Centered on Location");
+        showToast("Centered on location");
     } else {
-        showToast("No location yet...");
+        showToast("No location yet");
     }
 }
 
-function showLeaderboard() {
-    // Update local score in LB
-    const currentScore = document.getElementById("myScore").textContent;
-    document.getElementById("lb-my-score").textContent = currentScore + " pts";
 
-    document.getElementById("leaderboard-screen").classList.remove("hidden");
+function showLogs() {
+    const logBox = document.getElementById("log-box");
+    const logList = document.getElementById("log-list");
+
+    // show/hide the log box
+    logBox.classList.toggle("hidden");
+
+    // only fetch if the box is open
+    if (logBox.classList.contains("hidden")) {
+        return;
+    }
+
+    // clear old logs first
+    logList.innerHTML = "Loading logs...";
+
+    fetch(`${API_URL}/logs`)
+        .then(res => res.json())
+        .then(data => {
+            const logs = data.logs || [];
+
+            logList.innerHTML = "";
+
+            if (logs.length === 0) {
+                logList.textContent = "No logs yet.";
+                return;
+            }
+
+            logs.forEach(log => {
+                const item = document.createElement("div");
+                item.className = "log-item";
+
+                item.textContent = log.message || `${log.action}: ${log.details}`;
+
+                logList.appendChild(item);
+            });
+        })
+        .catch(err => {
+            console.error("Error loading logs:", err);
+            logList.textContent = "Failed to load logs.";
+        });
 }
 
-function hideLeaderboard() {
-    document.getElementById("leaderboard-screen").classList.add("hidden");
-}
 
 function showSummary() {
     const dist = document.getElementById("distance").textContent;
     const time = document.getElementById("timer").textContent;
-    const score = document.getElementById("myScore").textContent;
 
     document.getElementById("sum-dist").textContent = dist;
     document.getElementById("sum-time").textContent = time;
-    document.getElementById("sum-score").textContent = score;
 
     document.getElementById("summary-screen").classList.remove("hidden");
 }
 
 function hideSummary() {
     document.getElementById("summary-screen").classList.add("hidden");
-    // Reset stats if needed
+
     totalDistance = 0;
+    pathCoordinates = [];
+
+    if (userPath) userPath.setLatLngs([]);
+
     document.getElementById("distance").textContent = "0.00";
     document.getElementById("timer").textContent = "00:00";
+    document.getElementById("speed").textContent = "0.0";
 }
 
 function showToast(msg) {
     const container = document.getElementById("toast-container");
+    if (!container) return;
+
     const toast = document.createElement("div");
     toast.className = "toast";
     toast.innerHTML = `<span>🔔</span> ${msg}`;
+
     container.appendChild(toast);
 
-    // Remove after anim (3s)
     setTimeout(() => {
         toast.remove();
     }, 3000);
-}
-
-
-// Backend Integration
-
-function fetchTerritories() {
-    fetch(`${API_URL}/territories`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.territories) {
-                data.territories.forEach(t => {
-                    drawTerritory(t.grid_id, t.color);
-                });
-                updateScoreBoard(data.territories);
-            }
-        })
-        .catch(err => console.error("Error fetching territories:", err));
-}
-
-function captureTerritory(lat, lng) {
-    fetch(`${API_URL}/update-location`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat, lng, userId: USER_ID })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.captured) {
-                drawTerritory(data.gridId, '#3b82f6'); // Neon Blue
-                fetchTerritories();
-                showToast("Zone Captured! +10 pts");
-            }
-        })
-        .catch(err => console.error("Error updating location:", err));
-}
-
-function drawTerritory(gridId, color) {
-    if (conqueredGrids.has(gridId)) return;
-
-    // Adjust color for neon theme if needed
-    // But backend sends hex, so we trust it or override
-    let drawColor = color;
-    if (color === '#6366f1') drawColor = '#3b82f6'; // Match neon blue
-
-    const [latIdx, lngIdx] = gridId.split(',').map(Number);
-    const lat = latIdx / 10000;
-    const lng = lngIdx / 10000;
-
-    const bounds = [[lat, lng], [lat + 0.0001, lng + 0.0001]];
-
-    L.rectangle(bounds, {
-        color: drawColor,
-        weight: 1,
-        fillOpacity: 0.4,
-        className: 'territory-anim'
-    }).addTo(map);
-    conqueredGrids.add(gridId);
-}
-
-function updateScoreBoard(territories) {
-    let myCount = 0;
-    let rivalCount = 0;
-
-    territories.forEach(t => {
-        if (t.color === '#6366f1' || t.color === '#3b82f6') myCount++;
-        else rivalCount++;
-    });
-
-    document.getElementById("myScore").textContent = myCount * 10; // 10 pts per zone
-    document.getElementById("enemyScore").textContent = rivalCount * 10;
 }
 
 // Message Logic
@@ -346,6 +330,7 @@ async function loadMessage() {
         const res = await fetch(`${API_URL}/message`);
         const data = await res.json();
         const msgEl = document.getElementById('gameMessage');
+
         if (data.content && msgEl) {
             msgEl.textContent = data.content;
         }
@@ -354,9 +339,9 @@ async function loadMessage() {
     }
 }
 
-// Initialize on Load
+// Initialize
 window.addEventListener('load', () => {
     initMap();
     loadMessage();
-    setInterval(loadMessage, 10000); // 10s refresh
+    setInterval(loadMessage, 10000);
 });

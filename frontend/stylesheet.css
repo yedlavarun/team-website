@@ -278,6 +278,30 @@ body {
     gap: 12px;
 }
 
+#log-container {
+    position: absolute;
+    left: 20px;
+    bottom: 180px;
+    /* Above bottom panel */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#log-box {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--primary);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-weight: 500;
+    box-shadow: 0 0 15px var(--primary-glow);
+    font-size: 0.95rem;
+}
+
+
 .fab {
     width: 48px;
     height: 48px;

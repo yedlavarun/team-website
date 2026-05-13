@@ -45,26 +45,27 @@
             </div>
         </div>
 
-        <!-- Game Message Banner -->
-        <div id="gameMessage" class="game-message hud-element">Loading mission intel...</div>
 
-        <!-- Top Left: Team & Status -->
-        <div class="top-bar hud-element">
-            <div class="team-badge">
-                <div class="team-name">Blue Squad</div>
-            </div>
-
-            <div class="status-indicators">
-                <div class="status-dot active" title="Online"></div>
-                <div class="status-dot active" title="GPS Locked"></div>
-            </div>
-        </div>
 
         <!-- Floating Map Actions (Right Side) -->
         <div class="map-actions hud-element">
             <div class="fab" onclick="centerMap()">📍</div>
             <div class="fab" onclick="showLeaderboard()">🏆</div>
         </div>
+
+        <!-- Logs -->
+        <div id="log-container" class="log-container hud-element">
+            <div class="fab" onclick="showLogs()">🪵</div>
+        </div>
+
+
+        <div id="log-box" class="log-box">
+            <h3>Activity Logs</h3>
+            <div id="log-list">
+
+            </div>
+        </div>
+
 
         <!-- Bottom Controls -->
         <div class="bottom-controls hud-element">
