@@ -288,17 +288,27 @@ body {
     gap: 12px;
 }
 
-#log-box {
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--primary);
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: var(--radius-md);
-    text-align: center;
-    font-weight: 500;
-    box-shadow: 0 0 15px var(--primary-glow);
-    font-size: 0.95rem;
+.hidden {
+    display: none;
+}
+
+.log-box {
+    position: absolute;
+    bottom: 70px;
+    right: 20px;
+    width: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #111;
+    color: white;
+    padding: 15px;
+    border: 1px solid #555;
+    border-radius: 10px;
+}
+
+.log-item {
+    padding: 8px;
+    border-bottom: 1px solid #333;
 }
 
 
