@@ -49,6 +49,7 @@ function initializeDatabase() {
         db.run(`CREATE TABLE IF NOT EXISTS logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
+            guest_id TEXT,
             action TEXT,
             details TEXT,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -89,9 +90,9 @@ app.post('/api/message', (req, res) => {
 });
 
 app.post('/api/log-run', (req, res) => {
-    const { distance, time, avg_velocity } = req.body;
+    const { guestId, distance, time, avg_velocity } = req.body;
 
-    saveLog(null, "run_completed", {
+    saveLog(null, guestId, "run_completed", {
         distance: distance,
         time: time,
         avg_velocity: avg_velocity
@@ -101,22 +102,29 @@ app.post('/api/log-run', (req, res) => {
 });
 
 // Logs helper
-function saveLog(userId, action, details = {}) {
+function saveLog(userId, guest_id, action, details = {}) {
     db.run(
-        `INSERT INTO logs (user_id, action, details)
-         VALUES (?, ?, ?)`,
-        [userId || null, action, JSON.stringify(details)]
+        `INSERT INTO logs (user_id, guest_id, action, details)
+         VALUES (?, ?, ?, ?)`,
+        [userId || null, guest_id || null, action, JSON.stringify(details)]
     );
 }
 
-app.get('/api/logs', (req, res) => {
-    db.all('SELECT * FROM logs ORDER BY timestamp DESC', [], (err, rows) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
 
-        res.json({ logs: rows });
-    });
+app.get('/api/logs', (req, res) => {
+    const guestId = req.query.guestId;
+
+    db.all(
+        'SELECT * FROM logs WHERE guest_id = ? ORDER BY timestamp DESC',
+        [guestId],
+        (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+
+            res.json({ logs: rows });
+        }
+    );
 });
 
 // Start server

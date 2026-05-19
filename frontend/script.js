@@ -16,6 +16,13 @@ let lastLat = null;
 let lastLng = null;
 let lastTime = null;
 
+let guestId = localStorage.getItem("guestId");
+
+if (!guestId) {
+    guestId = crypto.randomUUID();
+    localStorage.setItem("guestId", guestId);
+}
+
 // Initialize Map
 function initMap() {
     const southWest = L.latLng(-85, -180);
@@ -121,6 +128,7 @@ function logRun() {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+            guestId: guestId,
             distance: distance,
             time: time,
             avg_velocity: avg_velocity
@@ -258,7 +266,7 @@ function showLogs() {
     // clear old logs first
     logList.innerHTML = "Loading logs...";
 
-    fetch(`${API_URL}/logs`)
+    fetch(`${API_URL}/logs?guestId=${guestId}`)
         .then(res => res.json())
         .then(data => {
             const logs = data.logs || [];
